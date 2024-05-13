@@ -15,7 +15,7 @@ Each program will have the following files:
 - The library file itself
 - PyRequire utilities packaged into a single file to pull in the dependencies specified in the main.py.
 
-
+No other files should be included, in order to keep things as clean as possible.
 
 The main.py file must have headers akin to the following:
 ```cpp
