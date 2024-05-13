@@ -23,6 +23,7 @@ The main.py file must have headers akin to the following:
 #define description My Cool Library that does cool stuff, yknow.
 #define dependencies bimum.printutils, vexcess.zig
 ```
+The username declaration is just to make things easy when someone changes their username.
 
 ## Pulling together
 The spin-offs of the KPPM program will be automatically indexed for the latest updates by a github workflow.
