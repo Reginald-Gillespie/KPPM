@@ -18,6 +18,8 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: '16'
+      - name: Install node-fetch
+        run: npm i node-fetch-commonjs
       - name: Run script
         run: node "$(pwd)/UpdateProgramIndex.js"
       - uses: stefanzweifel/git-auto-commit-action@v4
