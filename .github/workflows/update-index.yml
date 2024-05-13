@@ -22,10 +22,6 @@ jobs:
         with:
           commit_message: Automated index update
 #           push_options: '--force'
-#       - uses: gacts/purge-jsdelivr-cache@v1
-#         with:
-#           url: |
-#             https://cdn.jsdelivr.net/gh/Reginald-Gillespie/LiveKhanImports@main/test.js
 
 #       - name: Commit report
 #         run: |
