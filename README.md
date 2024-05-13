@@ -3,7 +3,7 @@ Khan Python Package Manager. An idea for a python library indexer for https://ww
 
 
 # Idea
-Create a single program who's spin-offs are indexed as libraries, and can be required.
+Create a single program who's spin-offs are indexed as libraries, and can be imported/required by name.
 
 This way, instead of a user specifying  `await require(6536968313421824, "printutils")`, they can use `await require("bimum.printutils")`
 
