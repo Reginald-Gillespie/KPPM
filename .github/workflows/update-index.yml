@@ -1,0 +1,35 @@
+name: Update Program Index
+
+on:  
+  schedule:
+    - cron: '0 0 * * *'
+
+jobs:
+  update:
+    environment: secrets
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+      - name: Run script
+        run: node "$(pwd)/UpdateProgramIndex.js"
+      - uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: Automated index update
+#           push_options: '--force'
+#       - uses: gacts/purge-jsdelivr-cache@v1
+#         with:
+#           url: |
+#             https://cdn.jsdelivr.net/gh/Reginald-Gillespie/LiveKhanImports@main/test.js
+
+#       - name: Commit report
+#         run: |
+#           git config --global user.name 'WKoA'
+#           git config --global user.email 'Reginald-Gillespie@users.noreply.github.com'
+#           git commit -am "Automated report"
+#           git push
