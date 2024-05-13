@@ -22,8 +22,19 @@ The main.py file must have headers akin to the following:
 #define author <username>
 #define description My Cool Library that does cool stuff, yknow.
 #define dependencies bimum.printutils, vexcess.zig
+#define productionReady true
 ```
 
+## Pulling together
+The spin-offs of the KPPM program will be automatically indexed for the latest updates by a github workflow.
+
+Programs that update their libraries will have to be republished, as indexing will only pull in the latest libraries. Developing a library should be done with productionReady set to false to prevent indexing, and republished afterwards.
+
+Hopefully, this allows this to use little CPU power so it can all be done with a short github workflow to commit the data here. If it ever becomes too much for a workflow, I'll redesign it or host it myself.
+
+Libraries will be reindexed at a set time daily, so users can know what time they should release their library if they want it to be at the top of the HL at the same time it's in KPPM.
+
+I'll probably also accept github commits to index libraries before the script itself runs.
 
 ## PyRequire
 I've already designed a program capable of pulling in other programs into the current pyodide pseudo-filesystem, see https://www.khanacademy.org/python-program/pyrequire-v1/5920458708533248
