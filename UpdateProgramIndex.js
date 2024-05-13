@@ -3,11 +3,30 @@
 const fs = require("fs");
 const fetch = require('node-fetch-commonjs');
 
-const toIndex = "4969978486505472";
+const toIndex = "4783660036964352";
 let queries = []
 
 // Load in the current index of programs.
 let index = JSON.parse(fs.readFileSync("./ProgramIndex.json").toString());
+
+// Index follows this format:
+// [
+//     "username.package": {
+//         file: "filename.py",
+//         description: "My cool library",
+//         username: "username", // (at creation time)
+//         nickname: "My Name",
+//         title: "My Program",
+//         kaid: "kaid_1234",
+//         programID: 1234,
+//         votesAtLastIndex: 5,
+//     }
+// ]
+
+
+async function KAQuery(name, variables) {
+    
+}
 
 async function getSpinOffs(id, cursor="") {
     // Setup request
@@ -58,7 +77,9 @@ async function getSpinOffs(id, cursor="") {
         cursor = response.cursor;
         
         // Index each of these programs
-        console.log(response)
+        for (var program of programs) {
+            console.log(program)
+        }
 
         // Check if we hit the end of available programs
         if (response.complete) {
@@ -69,7 +90,7 @@ async function getSpinOffs(id, cursor="") {
     }
 
     // Finally write the index
-    fs.writeFileSync("./UpdateProgramIndex.js", JSON.stringify(index))
+    fs.writeFileSync("./ProgramIndex.js", JSON.stringify(index))
 })()
 
 
