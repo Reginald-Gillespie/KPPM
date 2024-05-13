@@ -36,5 +36,7 @@ Libraries will be reindexed at a set time daily, so users can know what time the
 
 I'll probably also accept github commits to index libraries before the script itself runs.
 
+Maybe I should do a bi-weekly scans to make sure the programs have not changed?
+
 ## PyRequire
 I've already designed a program capable of pulling in other programs into the current pyodide pseudo-filesystem, see https://www.khanacademy.org/python-program/pyrequire-v1/5920458708533248
