@@ -35,7 +35,7 @@ Libraries will be indexed at a set time daily, so users can know what time they 
 
 I'll probably also accept github commits to index libraries before the script itself runs.
 
-Maybe I should do a bi-weekly scans to make sure the programs have not changed?
+Maybe I should do a bi-weekly scans to update the vote count of libraries?
 
 ## PyRequire
 I've already designed a program capable of pulling in other programs into the current pyodide pseudo-filesystem, see https://www.khanacademy.org/python-program/pyrequire-v1/5920458708533248
