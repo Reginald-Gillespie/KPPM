@@ -10,7 +10,13 @@ This way, instead of a user specifying  `await require(6536968313421824, "printu
 Another idea is have something like `await searchPackage("print clear function")`, which will fuzzy search for matching libraries, much like yay, apt, winget, and other package managers (but a little more fuzzy because 13 yo's are bad at naming things).
 
 ## Format
-Each program will have a main.py showing how to use the library, and the library file itself which will be imported.
+Each program will have the following files:
+- The standard main.py showing how to use the library
+- The library file itself
+- PyRequire utilities packaged into a single file to pull in the dependencies specified in the main.py.
+
+
+
 The main.py file must have headers akin to the following:
 ```cpp
 #define author <username>
