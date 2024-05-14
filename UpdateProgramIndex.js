@@ -34,8 +34,8 @@ let index = JSON.parse(fs.readFileSync("./KPPMIndex.json").toString());
 
 function sanitize(input) {
     input = String(input);
-    input = input.match(/[\x20-\x7e]/g).join(""); // space through tilde
-    return input.trim();
+    input = input.match(/[\x20-\x7e]/g)?.join(""); // space through tilde
+    return input?.trim() || "";
 }
 
 function limitLen(input, length, dotdotdot=false) {
