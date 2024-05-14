@@ -8,14 +8,25 @@ This is the single KPPM utilities file needed to publish a library or use kppm.
 """
 
 
+
+
+
+
+
+
+
+
+
 """
 Technical notes:
 The filesystem persists through restarts, so we save json+python files here to minimize requests
 At the very least, downloading and searching the KPPM database uses no "bypasses".
-Loading the code itself
+Loading other code files requires requesting an proxy service to grab the code and send it to us, 
+ since KA's cors blocks us from dirrectly accessing the code ourselves.
 
 
 """
+
 
 
 
@@ -23,6 +34,8 @@ import js
 from os import listdir
 from js import JSON # we'll need this to parse JS json later
 import json # and we'll need this to parse json files for python
+import re
+from math import sqrt
 # from js import pyfetch #imported later
 # from js import pyJSON #imported later
 
@@ -117,6 +130,9 @@ def readFile(name):
 def log(message):
     print("\n!! KPPM - " + str(message) + " !!\n")
 
+def jsonToDict(jsJson):
+    return json.loads(pyJSON.stringify(jsJson))
+
 def flatten(t):
     result = []
     for item in t:
@@ -126,6 +142,22 @@ def flatten(t):
             result.append(item)
     return tuple(result)
 
+def removeSuffixes(text):
+    pattern = r'(ed|ing|s|able|or|ful|less|ly|ty)\b'
+    words = text.split()
+    processed_words = [re.sub(pattern, '', word) for word in words]
+    result = ' '.join(processed_words)
+    return result
+
+def strictNormalize(query):
+    # turned into smth for search queries, getting query and content as close as possible
+    query = str(query)
+    query = re.sub(r'[^A-Za-z\d]', ' ', query)
+    query = re.sub(r'\s+', ' ', query)
+    query = query.strip()
+    query = query.lower()
+    query = removeSuffixes(query)
+    return query
 
 async def getQueries():
     global queries
@@ -190,17 +222,35 @@ async def loadKPPMIndex():
         kppmIndex = json.loads(readFile("kppmIndex.json"))
         return
     request = await pyfetch("https://raw.githubusercontent.com/Reginald-Gillespie/KPPM/main/KPPMIndex.json", {"disableCorsProxy": True})
-    kppmIndex = await request.json()
+    kppmIndex = jsonToDict(await request.json())
     writeFile("kppmIndex.json", pyJSON.stringify(kppmIndex))
 
 async def loadDefinedDependencies():
-    pass
+    # Now, we need to search for the file with #defined dependencies
+    files = listdir()
+    for file in files:
+        fileContents = readFile(file)
+        depMatches = re.search(r"^#\s*define\s+dependencies[ \t]*(.*)", fileContents, re.MULTILINE)
+        packageNameMatch = re.search(r"^#\s*define\s+package[ \t]*(.*)$", fileContents, re.MULTILINE)  
+        if depMatches and packageNameMatch:
+            # If we found a file needing dependencies, import those. 
+            # This will run on all library files we import but their
+            #  files are cached so shouldn't be much overhead.
+            dependencies = depMatches.group(1)
+            dependencies = re.sub(r"\s+", '', dependencies).strip()
+            dependencies = dependencies.split(",")            
+            for dep in dependencies:
+                if dep and dep != packageNameMatch.group(1): # prevent recursive error if infinitely requiring self
+                    await require(dep)
+        
 
 # Initialize is called by require, or by the main.py of libraries
 async def initialize(writeIndexToFilesystem=False):
     global fileClaims
+    global initialized
     if initialized:
         return
+    initialized = True
     # Fetch KA's latest queries
     await getQueries()
     # Load which files belong to which libraries
@@ -218,6 +268,7 @@ async def require(*args):
     args = flatten(args)
 
     # Check if we have globals
+    libraryFilenames = [] # for importing later
     callerGlobals = False
     if (isinstance(args[-1], dict)):
         callerGlobals = args[-1]
@@ -225,17 +276,19 @@ async def require(*args):
 
     # Get required library objects from index    
     for requestedLibrary in args:
+        requestedLibrary = str(requestedLibrary).lower()
         try:
-            requestedLibInfo = kppmIndex.get(requestedLibrary, False)            
+            requestedLibInfo = kppmIndex.get(requestedLibrary, False)
             # Make sure the library exists
             if not requestedLibInfo:
                 log("Required library " + str(requestedLibrary) + " not found.")
-            else: 
+            else:
                 # Check if this library conflicts or is already loaded
                 requestedFilename = requestedLibInfo["file"]
                 if fileClaims.get(requestedFilename, False):
                     if (fileClaims[requestedFilename] == requestedLibrary):
-                        print("Library already loaded")
+                        # print("Library already loaded")
+                        libraryFilenames.append(requestedFilename)
                         pass # Library is already loaded (by something else in the dependency tree)
                     else:
                         # Library file is taken by another library
@@ -277,18 +330,126 @@ async def require(*args):
 
                             else:
                                 # Finally time to write the dependency locally
-                                print(libraryFile)
                                 fileClaims[requestedFilename] = str(requestedLibrary)
                                 writeFile(requestedFilename, libraryFile)
+                                libraryFilenames.append(requestedFilename)
         
         except Exception as e:
             log("Exception while loading " + str(requestedLibrary))
-            print(e)
+            # print(e)
         # end import single dependency
-
-    # Import the dependencies into globals if we have them
 
     # Write the fileClaims to filesystem so it persists reloads
     writeFile("fileClaims.json", json.dumps(fileClaims))
 
+    # Import the dependencies into globals if we access
+    if callerGlobals:
+        libraryFilenames = [(file+" ")[:file.find(".")] for file in libraryFilenames]
+        for library in libraryFilenames:
+            module = __import__(library)
+            callerGlobals[library] = module
+
+async def search(query, minScore=0.01):
+    # Needs to be awaiting simply so we can initialize
+    if not initialized:
+        await initialize()
+
+    # Behind the scenes we'll filter the search and queries down to A-Za-z\d.
+    # If you want a different search algorithm, just read kppmIndex.js from the filesystem and search it yourself
+    query = set(strictNormalize(query).split())
+
+    allLibraries = list(kppmIndex.keys())
+    matches = []
+    
+    for library in allLibraries:
+        libraryInfo = kppmIndex[library]
+        description = set(strictNormalize(libraryInfo["description"]).split())
+
+        # Go for text match
+        intersection = query.intersection(description)
+        union = query.union(description)
+        matchScore = len(intersection) / len(union) # between 0 and 1
+
+        # Weight matches by votes a little - we do want to avoid returning matches that only have a lot of votes.
+        votesWeight = 0.15 # between 0 and 1
+        votes = libraryInfo["votesAtLastIndex"]
+        voteScore = votes / sqrt(150 + votes**2) # between 0 and 1
+        
+        if matchScore >= minScore:
+            # we'll add vote weight to total weight only after checking match threshold
+            totalScore = votesWeight*voteScore + (1-votesWeight)*matchScore
+            matches.append([library, round(totalScore, 3)])
+
+    # sort matches
+    matches.sort(key=lambda m: m[1], reverse=True)
+    
+    return matches
+
+async def lookup(name:str, returnAsJson=False):
+    if not initialized:
+        await initialize()
+        
+    package = kppmIndex.get(name, False)
+    if not package:
+        if returnAsJson:
+            return {"not found":name}
+        else:
+            return "Package \"" + name + "\" was not found."
+    else:
+        # We found it:
+        if returnAsJson:
+            return package
+        else:
+            response = ""
+            fields = list(package.keys())
+            for field in fields:
+                response += field + ": \"" + str(package[field]) + "\"\n"
+            return response.strip()
+
+async def shell():
+    if not initialized:
+        await initialize()
+    print("===============")
+    print("=KPPM Shell v1=")
+    print("===============")
+    print("Type HELP for help")
+    while True:
+        print("____")
+        command = input("KPPM> ")
+        print("")
+        command = command.lower().strip()
+        try:
+            command = command.split()
+            args = " ".join(command[1:])
+            
+            if len(command) == 0:
+                print("Please send a command - type HELP for help")
+            elif command[0] == "help":
+                print("Available commands:")
+                print("SEARCH <query>    - Search for a library")
+                print("LOOKUP <library>  - Lookup library info by name")
+                print("LOAD <library>    - Load a library file into the filesystem")
+            elif len(command) == 1:
+                print("Please send arguments with the command - type HELP for help")
+            elif command[0] == "search":
+                results = (await search(args))[:15] # limit to top 15
+                if results:
+                    output = ""
+                    for result in results:
+                        output += "Package: " + result[0] + "\nScore: " + str(result[1]) + "\n"
+                    print(output)
+                else:
+                    print("No packages found for that query.")
+            elif command[0] == "lookup":
+                results = await lookup(args)
+                print(results)
+            elif command[0] == "load":
+                await require(args)
+                print("Attempted to load " + args)
+            else:
+                print("Unknown command - type HELP for help")
+        except Exception as e:
+            print(e)
+            print("Error - type HELP for help")
+    
 
