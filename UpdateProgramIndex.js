@@ -1,5 +1,9 @@
 // File run by github workflow to update the ProgramIndex.json file.
 
+// TODO:
+// Currently, we don't worry about 429 (ratelimits).
+// Hopefully, we won't hit any issues.
+
 const fs = require("fs");
 const fetch = require('node-fetch-commonjs');
 
@@ -125,13 +129,12 @@ async function getProgram(id) {
                     newestProgram = createdAt;
                 }
 
-                if (createdAt < lastReadDate) {
+                // Check if we've finished scanning yet.
+                if (createdAt <= lastReadDate) {
                     indexing = false;
-                    console.log("Found program older than last lookup.")
                     log("Found program older than last lookup.")
                     break;
                 }
-                console.log("Here...")
 
                 const username = sanitize(String(profileRoot).split("/")[2])
                 if (!username || username.length < 2) {
