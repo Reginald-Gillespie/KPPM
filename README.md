@@ -19,9 +19,11 @@ No other files should be included, in order to keep things as clean as possible.
 
 The main.py file must have headers akin to the following:
 ```cpp
-#define author <username>
+#define author KPPM
+#define package library-example
+#define file library.py
 #define description My Cool Library that does cool stuff, yknow.
-#define dependencies bimum.printutils, vexcess.zig
+#define dependencies bimum.printutils, kppm.library-example
 ```
 The username declaration is just to make things easy when someone changes their username.
 
