@@ -15,7 +15,7 @@ let runLog = "Run log for " + (new Date()).toGMTString() + "\n";
 let lastReadDate = Number(fs.readFileSync("./system/lastReadDate.txt").toString());
 
 // Load in the current index of programs.
-let index = JSON.parse(fs.readFileSync("./ProgramIndex.json").toString());
+let index = JSON.parse(fs.readFileSync("./KPPMIndex.json").toString());
 
 // Index follows this format:
 // [
@@ -100,7 +100,7 @@ async function getProgram(id) {
     let cursor = "";
 
     // Keep track of the newest spinoff we see to record.
-    let newestProgram = 0;
+    let newestProgram = lastReadDate;
 
     let indexing = true;
     while (indexing) {
@@ -124,16 +124,16 @@ async function getProgram(id) {
                 const title = sanitize(programData.title);
                 const profileRoot = programData.author.profileRoot; //ugh why is this the only way to get the username
 
-                // Real quick before we do anything that could throw an error, check if createdAt is after newestProgram
-                if (createdAt > newestProgram) {
-                    newestProgram = createdAt;
-                }
-
                 // Check if we've finished scanning yet.
                 if (createdAt <= lastReadDate) {
                     indexing = false;
                     log("Found program older than last lookup.")
                     break;
+                }
+            
+                // Real quick before we do anything that could throw an error, check if createdAt is after newestProgram
+                if (createdAt > newestProgram) {
+                    newestProgram = createdAt;
                 }
 
                 const username = sanitize(String(profileRoot).split("/")[2])
@@ -198,6 +198,7 @@ async function getProgram(id) {
                     "votesAtLastIndex": +votes,
                 }
 
+                console.log(`No issues on ${id}, adding to index.`)
                 index[KPPMPackageName] = KPPMPackageJson;
 
             } catch (e) {
@@ -217,7 +218,7 @@ async function getProgram(id) {
     log(`---\nThis run took ${(Date.now() - startTime)/1000}ms`)
 
     // Finally write the updates
-    fs.writeFileSync("./ProgramIndex.js", JSON.stringify(index))
+    fs.writeFileSync("./KPPMIndex.json", JSON.stringify(index))
     fs.writeFileSync("./system/log.txt", runLog)
     fs.writeFileSync("./system/lastReadDate.txt", String(newestProgram))
 })()
