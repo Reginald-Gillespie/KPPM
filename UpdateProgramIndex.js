@@ -223,7 +223,7 @@ async function getProgram(id) {
                     "dependsOn": dependencies
                 }
 
-                console.log(`No issues on ${id}, adding to index.`)
+                log(`No issues on ${id}, adding to index.`)
                 index[KPPMPackageName] = KPPMPackageJson;
 
             } catch (e) {
