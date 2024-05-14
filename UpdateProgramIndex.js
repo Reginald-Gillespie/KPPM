@@ -33,7 +33,7 @@ let index = JSON.parse(fs.readFileSync("./KPPMIndex.json").toString());
 // ]
 
 function sanitize(input) {
-    input = String(input);
+    input = String(input || "");
     input = input.match(/[\x20-\x7e]/g)?.join(""); // space through tilde
     return input?.trim() || "";
 }
@@ -138,7 +138,7 @@ async function getProgram(id) {
                 }
 
                 const username = sanitize(String(profileRoot).split("/")[2]).toLowerCase();
-                if (!username || username.length < 2) {
+                if (!username || username.length <= 2) {
                     log(id + " - User does not have a username");
                     throw Error("Invalid");
                 }
@@ -146,32 +146,36 @@ async function getProgram(id) {
                 // Parse info from code itself
                 const files = JSON.parse(code).files;
                 const filesJSON = {}
+                var libraryFilename = false; // also record which file is the library file
                 for (const file of files) {
                     filesJSON[sanitize(file.filename)] = file.code;
+                    const packageName = sanitize(file.code.match(/(?<=#\s*define\s+package\s*).{0,40}/)?.[0]).toLowerCase();
+                    if (packageName) {
+                        // This is the library file with the metadata
+                        if (libraryFilename) {
+                            log(id + " - file " + libraryFilename + " and " + file.filename + " both have #define lines.")
+                            throw Error("Invalid.")
+                        }
+                        libraryFilename = file.filename;
+                    }
                 }
-                let mainPy = filesJSON["main.py"]
-                mainPy = mainPy.replaceAll(/^\s+/gm, ""); //Remove whitespace from start of lines
+
+                let libraryFile = filesJSON[libraryFilename]
+                libraryFile = libraryFile.replaceAll(/^\s+/gm, ""); //Remove whitespace from start of lines
                 // mainPy = mainPy.replaceAll(/^[^#].*\n?/gm, ""); //Remove non comment lines
                 // mainPy = mainPy.replaceAll(/(?<=^#)\s+/gm, ""); //Remove whitespace just after hash
                 // mainPy.replaceAll(/\n?^(?!#define).*\n?/gm, ""); //Remove non-metadata lines
                 // Maybe levenshtein the fields - but that's slow
-                const claimedUsername = sanitize(mainPy.match(/(?<=#\s*define\s+author\s*).{0,40}/)[0]).toLowerCase();
-                const packageName = sanitize(mainPy.match(/(?<=#\s*define\s+package\s*).{0,40}/)[0]).toLowerCase();
-                const libraryFilename = sanitize(mainPy.match(/(?<=#\s*define\s+file\s*).{0,40}/)[0]).toLowerCase();
-                const description = sanitize(limitLen( mainPy.match(/(?<=#\s*define\s+description\s*).{0,501}/)[0], 500, true));
-                let dependencies = sanitize(mainPy.match(/(?<=#\s*define\s+dependencies\s*).{0,1000}/)[0]).toLowerCase();
+                const claimedUsername = sanitize(libraryFile.match(/(?<=#\s*define\s+author\s*).{0,40}/)?.[0]).toLowerCase();
+                const packageName = sanitize(libraryFile.match(/(?<=#\s*define\s+package\s*).{0,40}/)?.[0]).toLowerCase();
+                // const libraryFilename = sanitize(mainPy.match(/(?<=#\s*define\s+file\s*).{0,40}/)[0]).toLowerCase();
+                const description = sanitize(limitLen( libraryFile.match(/(?<=#\s*define\s+description\s*).{0,501}/)?.[0], 500, true));
+                let dependencies = sanitize(libraryFile.match(/(?<=#\s*define\s+dependencies\s*).{0,1000}/)?.[0]).toLowerCase();
 
                 // Check the claimed username matches the real username
                 // This check should be removed if this is ever used to index older libraries
                 if (claimedUsername != username) {
                     log(id + ` - Library published under username it does not match (claimed to be ${claimedUsername}, is actually ${username})`);
-                    throw Error("Invalid");
-                }
-
-                // Check they do have the library file they claim to have
-                const libraryFile = filesJSON[libraryFilename];
-                if (!libraryFile) {
-                    log(id + ` - Program does not have file "${libraryFilename}"`);
                     throw Error("Invalid");
                 }
 
