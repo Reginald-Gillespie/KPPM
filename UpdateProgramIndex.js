@@ -28,13 +28,14 @@ let index = JSON.parse(fs.readFileSync("./KPPMIndex.json").toString());
 //         kaid: "kaid_1234",
 //         programID: 1234,
 //         votesAtLastIndex: 5,
+//         dependsOn: []
 //     }
 // ]
 
 function sanitize(input) {
     input = String(input);
     input = input.match(/[\x20-\x7e]/g).join(""); // space through tilde
-    return input;
+    return input.trim();
 }
 
 function limitLen(input, length, dotdotdot=false) {
@@ -136,7 +137,7 @@ async function getProgram(id) {
                     newestProgram = createdAt;
                 }
 
-                const username = sanitize(String(profileRoot).split("/")[2])
+                const username = sanitize(String(profileRoot).split("/")[2]).toLowerCase();
                 if (!username || username.length < 2) {
                     log(id + " - User does not have a username");
                     throw Error("Invalid");
@@ -154,15 +155,16 @@ async function getProgram(id) {
                 // mainPy = mainPy.replaceAll(/(?<=^#)\s+/gm, ""); //Remove whitespace just after hash
                 // mainPy.replaceAll(/\n?^(?!#define).*\n?/gm, ""); //Remove non-metadata lines
                 // Maybe levenshtein the fields - but that's slow
-                const claimedUsername = sanitize(mainPy.match(/(?<=#\s*define\s+author\s+).{0,40}/)[0]);
-                const packageName = sanitize(mainPy.match(/(?<=#\s*define\s+package\s+).{0,40}/)[0]);
-                const libraryFilename = sanitize(mainPy.match(/(?<=#\s*define\s+file\s+).{0,40}/)[0]);
+                const claimedUsername = sanitize(mainPy.match(/(?<=#\s*define\s+author\s+).{0,40}/)[0]).toLowerCase();
+                const packageName = sanitize(mainPy.match(/(?<=#\s*define\s+package\s+).{0,40}/)[0]).toLowerCase();
+                const libraryFilename = sanitize(mainPy.match(/(?<=#\s*define\s+file\s+).{0,40}/)[0]).toLowerCase();
                 const description = sanitize(limitLen( mainPy.match(/(?<=#\s*define\s+description\s+).{0,501}/)[0], 500, true));
-                const dependencies = sanitize(mainPy.match(/(?<=#\s*define\s+dependencies\s+).{0,1000}/)[0]);
+                let dependencies = sanitize(mainPy.match(/(?<=#\s*define\s+dependencies\s+).{0,1000}/)[0]).toLowerCase();
 
                 // Check the claimed username matches the real username
-                if (claimedUsername.trim() != username) {
-                    log(id + ` - Package published under username it does not match (claimed to be ${claimedUsername}, is actually ${username})`);
+                // This check should be removed if this is ever used to index older libraries
+                if (claimedUsername != username) {
+                    log(id + ` - Library published under username it does not match (claimed to be ${claimedUsername}, is actually ${username})`);
                     throw Error("Invalid");
                 }
 
@@ -173,6 +175,23 @@ async function getProgram(id) {
                     throw Error("Invalid");
                 }
 
+                // Parse dependencies
+                dependencies = dependencies.replaceAll(/\s/g, "");
+                dependencies = dependencies.split(",");
+                dependencies.forEach(dep => {
+                    if (dep.split(".").length !== 2) {
+                        log(id + "- Invalid dependency, incorrect format")
+                        throw Error("Invalid");
+                    }
+                    if (!dep.match(/^[a-z_\-\.]+$/)) {
+                        log(id + "- Invalid dependency, invalid characters")
+                        throw Error("Invalid");
+                    }
+                })
+                if (!dependencies) {
+                    dependencies = []
+                }
+                
                 // Finally
                 const KPPMPackageName = username + "." + packageName;
 
@@ -196,6 +215,7 @@ async function getProgram(id) {
                     "kaid": kaid,
                     "programID": id,
                     "votesAtLastIndex": +votes,
+                    "dependsOn": dependencies
                 }
 
                 console.log(`No issues on ${id}, adding to index.`)
