@@ -155,11 +155,11 @@ async function getProgram(id) {
                 // mainPy = mainPy.replaceAll(/(?<=^#)\s+/gm, ""); //Remove whitespace just after hash
                 // mainPy.replaceAll(/\n?^(?!#define).*\n?/gm, ""); //Remove non-metadata lines
                 // Maybe levenshtein the fields - but that's slow
-                const claimedUsername = sanitize(mainPy.match(/(?<=#\s*define\s+author\s+).{0,40}/)[0]).toLowerCase();
-                const packageName = sanitize(mainPy.match(/(?<=#\s*define\s+package\s+).{0,40}/)[0]).toLowerCase();
-                const libraryFilename = sanitize(mainPy.match(/(?<=#\s*define\s+file\s+).{0,40}/)[0]).toLowerCase();
-                const description = sanitize(limitLen( mainPy.match(/(?<=#\s*define\s+description\s+).{0,501}/)[0], 500, true));
-                let dependencies = sanitize(mainPy.match(/(?<=#\s*define\s+dependencies\s+).{0,1000}/)[0]).toLowerCase();
+                const claimedUsername = sanitize(mainPy.match(/(?<=#\s*define\s+author\s*).{0,40}/)[0]).toLowerCase();
+                const packageName = sanitize(mainPy.match(/(?<=#\s*define\s+package\s*).{0,40}/)[0]).toLowerCase();
+                const libraryFilename = sanitize(mainPy.match(/(?<=#\s*define\s+file\s*).{0,40}/)[0]).toLowerCase();
+                const description = sanitize(limitLen( mainPy.match(/(?<=#\s*define\s+description\s*).{0,501}/)[0], 500, true));
+                let dependencies = sanitize(mainPy.match(/(?<=#\s*define\s+dependencies\s*).{0,1000}/)[0]).toLowerCase();
 
                 // Check the claimed username matches the real username
                 // This check should be removed if this is ever used to index older libraries
@@ -180,11 +180,11 @@ async function getProgram(id) {
                 dependencies = dependencies.split(",");
                 dependencies.forEach(dep => {
                     if (dep.split(".").length !== 2) {
-                        log(id + "- Invalid dependency, incorrect format")
+                        log(id + " - Invalid dependency, incorrect format")
                         throw Error("Invalid");
                     }
                     if (!dep.match(/^[a-z_\-\.]+$/)) {
-                        log(id + "- Invalid dependency, invalid characters")
+                        log(id + " - Invalid dependency, invalid characters")
                         throw Error("Invalid");
                     }
                 })
