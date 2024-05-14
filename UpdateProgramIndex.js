@@ -178,6 +178,7 @@ async function getProgram(id) {
                 // Parse dependencies
                 dependencies = dependencies.replaceAll(/\s/g, "");
                 dependencies = dependencies.split(",");
+                dependencies = dependencies.filter(d => d!="")
                 dependencies.forEach(dep => {
                     if (dep.split(".").length !== 2) {
                         log(id + " - Invalid dependency, incorrect format")
