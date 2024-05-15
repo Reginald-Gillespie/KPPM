@@ -243,7 +243,7 @@ async function getProgram(id) {
     log(`---\nThis run took ${(Date.now() - startTime)/1000}ms`)
 
     // Finally write the updates
-    fs.writeFileSync("./KPPMIndex.json", JSON.stringify(index))
+    fs.writeFileSync("./KPPMIndex.json", JSON.stringify(index, null, 4)) // why not pretty print it
     fs.writeFileSync("./system/log.txt", runLog)
     fs.writeFileSync("./system/lastReadDate.txt", String(newestProgram))
 })()
