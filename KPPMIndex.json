@@ -37,7 +37,7 @@
     },
     "bhavjitAlt.pyfetch": {
         "file": "pyfetch.py",
-        "description": "Fetch API for networking in python with builtin cors workaround.",
+        "description": "Fetch API for networking requests in python with builtin cors workaround.",
         "username": "bhavjitAlt",
         "nickname": "Bimmon",
         "title": "pyFetch v1",
